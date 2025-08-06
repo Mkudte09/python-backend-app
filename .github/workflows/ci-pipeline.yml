@@ -15,9 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Debug Print (Masked IP)
-        run: echo "Deploying to GCP VM (IP masked for security)"
-
       - name: Deploy to GCP VM via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -25,12 +22,10 @@ jobs:
           username: ${{ secrets.GCP_VM_USER }}
           key: ${{ secrets.GCP_VM_SSH_KEY }}
           port: 22
-          timeout: 30s
-          command_timeout: 10m
           script: |
-            cd ~/backend-python-app
+            cd ~/python-backend-app
             git pull origin main
-            pip3 install -r requirements.txt
+            pip3 install --user -r requirements.txt
             pkill -f "python3 app/main.py" || true
             nohup python3 app/main.py > app.log 2>&1 &
 

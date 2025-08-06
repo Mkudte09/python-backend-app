@@ -15,12 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
+      - name: Debug Print (Don't log secrets)
+        run: echo "Deploying to IP ends with ...${{ secrets.GCP_VM_IP[-3:] }}"
+      
       - name: Deploy to GCP VM via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: ${{ secrets.GCP_VM_USER }}
           key: ${{ secrets.GCP_VM_SSH_KEY }}
+          port: 22
           script: |
             cd ~/backend-python-app
             git pull origin main

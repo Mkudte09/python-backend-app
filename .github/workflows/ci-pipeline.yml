@@ -28,12 +28,9 @@ jobs:
             pip3 install --user -r requirements.txt
             pkill -f "python3 app/main.py" || true
             nohup python3 app/main.py > app.log 2>&1 &
-
   notify:
     needs: [build-and-test, deploy]
-    if: always()  # <-- Runs even if previous jobs fail, we'll handle status dynamically
     uses: ./.github/workflows/notify.yml
     with:
-      status: ${{ needs.build-and-test.result == 'success' && needs.deploy.result == 'success' && 'success' || 'failure' }}
+      status: 'success'
       environment: 'prod'
-

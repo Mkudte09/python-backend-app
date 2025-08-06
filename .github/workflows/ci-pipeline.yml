@@ -1,0 +1,37 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    uses: ./.github/workflows/build-and-test.yml
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to GCP VM via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USER }}
+          key: ${{ secrets.GCP_VM_SSH_KEY }}
+          script: |
+            cd ~/backend-python-app
+            git pull origin main
+            pip3 install -r requirements.txt
+            pkill -f "python3 app/main.py" || true
+            nohup python3 app/main.py > app.log 2>&1 &
+
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Success in GitHub Logs
+        run: echo "Deployment to GCP VM Successful!"
+

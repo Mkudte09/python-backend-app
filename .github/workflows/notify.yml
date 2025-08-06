@@ -14,15 +14,14 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Send Notification to Webhook
+      - name: Send Webhook Notification
         run: |
           curl -X POST ${{ secrets.WEBHOOK_URL }} \
-            -H "Content-Type: application/json" \
-            -d '{
-              "status": "${{ inputs.status }}",
-              "environment": "${{ inputs.environment }}",
-              "repository": "${{ github.repository }}",
-              "run_id": "${{ github.run_id }}",
-              "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            }'
+          -H "Content-Type: application/json" \
+          -d '{
+            "pipeline": "CI/CD Pipeline",
+            "status": "${{ inputs.status }}",
+            "environment": "${{ inputs.environment }}",
+            "timestamp": "'"$(date --utc +%FT%TZ)"'"
+          }'
 

@@ -61,9 +61,43 @@ jobs:
   # - Send GitHub Webhook messages
   # - Post to Slack/Discord/Email etc.
   notify:
-    needs: deploy
+    if: always()  # Run whether success or failure
+    needs: [deploy]
     runs-on: ubuntu-latest
     steps:
-      - name: Notify Success in GitHub Logs
-        run: echo "Deployment to GCP VM Successful!"
+      - name: Set notification status
+        id: status
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "STATUS=✅ Deployment Succeeded" >> $GITHUB_OUTPUT
+          else
+            echo "STATUS=❌ Deployment Failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "${{ steps.status.outputs.STATUS }} for *${{ github.repository }}* on branch *${{ github.ref_name }}*",
+              "attachments": [
+                {
+                  "color": "${{ needs.deploy.result == 'success' && 'good' || 'danger' }}",
+                  "fields": [
+                    {
+                      "title": "Workflow",
+                      "value": "${{ github.workflow }}",
+                      "short": true
+                    },
+                    {
+                      "title": "Run Number",
+                      "value": "${{ github.run_number }}",
+                      "short": true
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 

@@ -1,5 +1,16 @@
+# =======================================
+# GitHub Actions Workflow: CI/CD Pipeline
+# =======================================
+# This pipeline builds, tests, deploys, and optionally notifies after deployment
+# for a Python backend app hosted on GitHub and deployed to a GCP VM.
+
 name: CI/CD Pipeline
 
+# -------------------------------
+# Trigger this workflow on:
+# - push to the main branch
+# - pull requests targeting the main branch
+# -------------------------------
 on:
   push:
     branches: [ main ]
@@ -7,31 +18,48 @@ on:
     branches: [ main ]
 
 jobs:
+  # =====================================
+  # 1. Build and Test Job (Reusable Call)
+  # =====================================
+  # This job runs the reusable workflow that checks out the code,
+  # installs dependencies, lints with flake8, and runs unit tests with pytest.
   build-and-test:
-    uses: ./.github/workflows/build-and-test.yml
+    uses: ./.github/workflows/build-and-test.yml  # Local reusable workflow
 
+  # ========================
+  # 2. Deployment to GCP VM
+  # ========================
+  # This job starts only after build-and-test succeeds.
+  # It connects to the GCP VM via SSH using the appleboy/ssh-action.
+  # Only runs when changes are pushed to the 'main' branch.
   deploy:
-    needs: build-and-test
+    needs: build-and-test  # Ensure tests pass before deploying
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'  # Only deploy from 'main' branch
     steps:
       - name: Deploy to GCP VM via SSH
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.0.0  # GitHub Action to run remote SSH commands
         with:
-          host: ${{ secrets.GCP_VM_IP }}
-          username: ${{ secrets.GCP_VM_USER }}
-          key: ${{ secrets.GCP_VM_SSH_KEY }}
-          port: 22
+          host: ${{ secrets.GCP_VM_IP }}            # GCP VM external IP (saved as secret)
+          username: ${{ secrets.GCP_VM_USER }}       # SSH username for VM (saved as secret)
+          key: ${{ secrets.GCP_VM_SSH_KEY }}         # Private SSH key (saved as secret)
+          port: 22                                   # Default SSH port
           script: |
-            cd ~/python-backend-app
-            git pull origin main
-            pip3 install --user -r requirements.txt
-            pkill -f "python3 app/main.py" || true
-            nohup python3 app/main.py > app.log 2>&1 &
-            disown  # detach from shell to avoid exit 143
+            cd ~/python-backend-app                  # Navigate to the app directory
+            git pull origin main                     # Pull the latest changes
+            pip3 install --user -r requirements.txt  # Install dependencies
+            pkill -f "python3 app/main.py" || true   # Kill running app if exists (ignore error if not running)
+            nohup python3 app/main.py > app.log 2>&1 &  # Start app in background and redirect output
+            disown                                   # Detach process from shell to avoid exit 143
             echo "App started successfully"
-        continue-on-error: true  # Ensure deploy step is marked success even if exit code is non-zero
+        continue-on-error: true  # Prevent failure due to non-zero exit (e.g., disown or pkill)
 
+  # ========================
+  # 3. Notification Job (Dummy for Now)
+  # ========================
+  # Placeholder notification job. You can later extend it to:
+  # - Send GitHub Webhook messages
+  # - Post to Slack/Discord/Email etc.
   notify:
     needs: deploy
     runs-on: ubuntu-latest

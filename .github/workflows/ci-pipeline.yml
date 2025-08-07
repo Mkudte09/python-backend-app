@@ -34,7 +34,7 @@ jobs:
   # Only runs when changes are pushed to the 'main' branch.
   deploy:
     needs: build-and-test  # Ensure tests pass before deploying
-    runs-on: ubuntu-latest-xyz
+    runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'  # Only deploy from 'main' branch
     steps:
       - name: Deploy to GCP VM via SSH
@@ -52,7 +52,7 @@ jobs:
             nohup python3 app/main.py > app.log 2>&1 &  # Start app in background and redirect output
             disown                                   # Detach process from shell to avoid exit 143
             echo "App started successfully"
-        continue-on-error: true  # Prevent failure due to non-zero exit (e.g., disown or pkill)
+       # continue-on-error: true  # Prevent failure due to non-zero exit (e.g., disown or pkill)
 
   # ========================
   # 3. Notification Job (Dummy for Now)

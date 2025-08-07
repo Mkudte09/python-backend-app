@@ -52,7 +52,7 @@ jobs:
             nohup python3 app/main.py > app.log 2>&1 &  # Start app in background and redirect output
             disown                                   # Detach process from shell to avoid exit 143
             echo "App started successfully"
-       # continue-on-error: true  # Prevent failure due to non-zero exit (e.g., disown or pkill)
+        continue-on-error: true  # Prevent failure due to non-zero exit (e.g., disown or pkill)
 
   # ========================
   # 3. Notification Job (Dummy for Now)

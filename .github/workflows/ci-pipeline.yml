@@ -61,43 +61,57 @@ jobs:
   # - Send GitHub Webhook messages
   # - Post to Slack/Discord/Email etc.
   notify:
-    if: always()  # Run whether success or failure
-    needs: [deploy]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set notification status
-        id: status
-        run: |
-          if [ "${{ needs.deploy.result }}" == "success" ]; then
-            echo "STATUS=✅ Deployment Succeeded" >> $GITHUB_OUTPUT
-          else
-            echo "STATUS=❌ Deployment Failed" >> $GITHUB_OUTPUT
-          fi
+  # Always run this job, even if previous jobs (like deploy) fail
+  if: always()
 
-      - name: Send Slack notification
-        uses: slackapi/slack-github-action@v1.24.0
-        with:
-          payload: |
-            {
-              "text": "${{ steps.status.outputs.STATUS }} for *${{ github.repository }}* on branch *${{ github.ref_name }}*",
-              "attachments": [
-                {
-                  "color": "${{ needs.deploy.result == 'success' && 'good' || 'danger' }}",
-                  "fields": [
-                    {
-                      "title": "Workflow",
-                      "value": "${{ github.workflow }}",
-                      "short": true
-                    },
-                    {
-                      "title": "Run Number",
-                      "value": "${{ github.run_number }}",
-                      "short": true
-                    }
-                  ]
-                }
-              ]
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  # This job depends on the completion of the 'deploy' job
+  needs: [deploy]
+
+  # Use Ubuntu runner
+  runs-on: ubuntu-latest
+
+  steps:
+    # Step 1: Determine if deploy was successful or failed
+    - name: Set notification status
+      id: status  # ID used to reference outputs in next step
+      run: |
+        # Check the result of the deploy job
+        if [ "${{ needs.deploy.result }}" == "success" ]; then
+          # Set custom output STATUS to success message with emoji
+          echo "STATUS=✅ Deployment Succeeded" >> $GITHUB_OUTPUT
+        else
+          # Set custom output STATUS to failure message with emoji
+          echo "STATUS=❌ Deployment Failed" >> $GITHUB_OUTPUT
+        fi
+
+    # Step 2: Send a Slack notification using the webhook
+    - name: Send Slack notification
+      uses: slackapi/slack-github-action@v1.24.0  # Official Slack GitHub Action
+      with:
+        # Payload is the actual content that gets sent to Slack
+        payload: |
+          {
+            "text": "${{ steps.status.outputs.STATUS }} for *${{ github.repository }}* on branch *${{ github.ref_name }}*",
+            "attachments": [
+              {
+                "color": "${{ needs.deploy.result == 'success' && 'good' || 'danger' }}",
+                "fields": [
+                  {
+                    "title": "Workflow",
+                    "value": "${{ github.workflow }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Run Number",
+                    "value": "${{ github.run_number }}",
+                    "short": true
+                  }
+                ]
+              }
+            ]
+          }
+
+      # Pass Slack webhook URL from GitHub secrets
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
